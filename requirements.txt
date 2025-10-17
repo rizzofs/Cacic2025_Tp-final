@@ -1,0 +1,53 @@
+# Dependencias base del Mozo Virtual
+langchain==0.2.0
+langchain-core==0.2.0
+langchain-community==0.2.0
+langgraph==0.0.40
+langchain-chroma==0.1.0
+langchain-google-genai==2.1.12
+
+# Dependencias para IA Generativa
+google-generativeai==0.8.0
+chromadb==0.4.22
+
+# Dependencias para persistencia en Notion
+notion-client==2.2.1
+
+# Dependencias para observabilidad y tracing
+langsmith==0.1.0
+langchain-openai==0.1.0
+
+# Dependencias para manejo de variables de entorno
+python-dotenv==1.0.0
+
+# Dependencias para procesamiento de texto y embeddings
+sentence-transformers==2.2.2
+tiktoken==0.5.1
+
+# Dependencias para manejo de datos
+pandas==2.1.0
+numpy==1.24.3
+
+# Dependencias para testing y desarrollo
+pytest==7.4.0
+pytest-asyncio==0.21.1
+
+# Dependencias para documentación
+jupyter==1.0.0
+matplotlib==3.7.2
+seaborn==0.12.2
+
+# Dependencias para manejo de archivos
+PyPDF2==3.0.1
+python-docx==0.8.11
+
+# Dependencias para manejo de fechas y tiempo
+python-dateutil==2.8.2
+
+# Dependencias para requests HTTP
+requests==2.31.0
+httpx==0.24.1
+
+# Dependencias para logging y monitoreo
+structlog==23.1.0
+rich==13.5.2
