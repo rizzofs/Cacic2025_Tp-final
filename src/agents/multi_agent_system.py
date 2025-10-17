@@ -22,6 +22,8 @@ os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.tools.retriever import create_retriever_tool
+from langchain.agents import create_react_agent
+from langchain.prompts import PromptTemplate
 from langchain_core.tools import tool
 from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
 
@@ -92,10 +94,27 @@ class MultiAgentMozoVirtual:
             model="models/gemini-embedding-001",
             google_api_key=os.getenv("GEMINI_API_KEY")
         )
+        
+        # Crear LLMs específicos para cada agente
+        self.llm_investigator = ChatGoogleGenerativeAI(
+            model="gemini-2.0-flash",
+            google_api_key=os.getenv("GEMINI_API_KEY"), 
+            temperature=0.7
+        )
+        self.llm_generator = ChatGoogleGenerativeAI(
+            model="gemini-2.0-flash",
+            google_api_key=os.getenv("GEMINI_API_KEY"), 
+            temperature=0.7
+        )
+        
         print("Modelo Gemini configurado para sistema multi-agente.")
     
     def setup_tools(self):
         """Definir herramientas especializadas para cada agente"""
+        
+        # Definir herramientas como atributos de clase
+        self.investigator_tools = []
+        self.generator_tools = []
         
         # HERRAMIENTAS DEL AGENTE INVESTIGADOR
         @tool
@@ -152,6 +171,8 @@ class MultiAgentMozoVirtual:
             except Exception as e:
                 return f"Error en la investigacion: {str(e)}"
         
+        self.investigator_tools.append(investigar_plato_detallado)
+        
         @tool
         def analizar_preferencias_cliente(descripcion: str):
             """Analiza las preferencias del cliente basándose en su descripción."""
@@ -195,6 +216,8 @@ class MultiAgentMozoVirtual:
             except Exception as e:
                 return f"Error analizando preferencias: {str(e)}"
         
+        self.investigator_tools.append(analizar_preferencias_cliente)
+        
         # HERRAMIENTAS DEL AGENTE GENERADOR
         @tool
         def generar_informe_recomendacion(tipo_informe: str = "recomendacion_completa"):
@@ -223,6 +246,8 @@ class MultiAgentMozoVirtual:
                 
             except Exception as e:
                 return f"Error generando informe: {str(e)}"
+        
+        self.generator_tools.append(generar_informe_recomendacion)
         
         @tool
         def guardar_informe_notion():
@@ -303,6 +328,8 @@ class MultiAgentMozoVirtual:
                 self.guardar_informe_local(informe)
                 return f"Error con Notion, guardado localmente: {str(e)}"
         
+        self.generator_tools.append(guardar_informe_notion)
+        
         @tool
         def generar_resumen_decision():
             """Genera un resumen de la decisión tomada por el sistema multi-agente."""
@@ -325,6 +352,8 @@ class MultiAgentMozoVirtual:
                 
             except Exception as e:
                 return f"Error generando resumen: {str(e)}"
+        
+        self.generator_tools.append(generar_resumen_decision)
         
         # Asignar herramientas
         self.investigator_tools = [
@@ -367,46 +396,84 @@ class MultiAgentMozoVirtual:
         
         def investigator_node(state: MultiAgentState):
             """Nodo del agente investigador"""
-            system_prompt = """
-            Eres el Agente Investigador del sistema multi-agente de La Taberna del Río.
+            system_prompt = PromptTemplate(
+                input_variables=["input", "agent_scratchpad", "tools", "tool_names"],
+                template="""
+Eres el Agente Investigador del sistema multi-agente de La Taberna del Río.
+
+Tu función:
+1. Buscar información específica en la base de conocimiento
+2. Analizar las preferencias del cliente
+3. Preparar datos para el agente generador
+
+IMPORTANTE: DEBES USAR LAS HERRAMIENTAS DISPONIBLES.
+
+Instrucciones:
+- SIEMPRE usa 'investigar_plato_detallado' para búsquedas específicas
+- SIEMPRE usa 'analizar_preferencias_cliente' para entender necesidades
+- NO respondas sin usar las herramientas
+- Después de usar las herramientas, resume tus hallazgos
+- Siempre responde en español
+- Sé meticuloso en la investigación
+
+Herramientas disponibles: {tool_names}
+
+Input: {input}
+
+{agent_scratchpad}
+"""
+            )
             
-            Tu función:
-            1. Buscar información específica en la base de conocimiento
-            2. Analizar las preferencias del cliente
-            3. Preparar datos para el agente generador
+            # Crear agente con herramientas
+            investigator_agent = create_react_agent(
+                self.llm_investigator,
+                self.investigator_tools,
+                system_prompt
+            )
             
-            Instrucciones:
-            - Usa 'investigar_plato_detallado' para búsquedas específicas
-            - Usa 'analizar_preferencias_cliente' para entender necesidades
-            - Siempre responde en español
-            - Sé meticuloso en la investigación
-            """
-            
-            messages = [SystemMessage(content=system_prompt)] + state["messages"]
-            response = self.llm_investigator.invoke(messages)
-            return {"messages": [response], "current_agent": "investigator"}
+            response = investigator_agent.invoke(state)
+            return {"messages": [response["messages"][-1]], "current_agent": "investigator"}
         
         def generator_node(state: MultiAgentState):
             """Nodo del agente generador"""
-            system_prompt = """
-            Eres el Agente Generador de Informes del sistema multi-agente de La Taberna del Río.
+            system_prompt = PromptTemplate(
+                input_variables=["input", "agent_scratchpad", "tools", "tool_names"],
+                template="""
+Eres el Agente Generador de Informes del sistema multi-agente de La Taberna del Río.
+
+Tu función:
+1. Crear informes estructurados basados en la investigación
+2. Generar recomendaciones personalizadas
+3. Guardar informes en Notion
+
+IMPORTANTE: DEBES USAR LAS HERRAMIENTAS DISPONIBLES.
+
+Instrucciones:
+- SIEMPRE usa 'generar_informe_recomendacion' para crear informes
+- SIEMPRE usa 'guardar_informe_notion' para persistir datos
+- SIEMPRE usa 'generar_resumen_decision' para resumir decisiones
+- NO respondas sin usar las herramientas
+- Después de usar las herramientas, proporciona un resumen claro
+- Siempre responde en español
+- Crea informes profesionales y estructurados
+
+Herramientas disponibles: {tool_names}
+
+Input: {input}
+
+{agent_scratchpad}
+"""
+            )
             
-            Tu función:
-            1. Crear informes estructurados basados en la investigación
-            2. Generar recomendaciones personalizadas
-            3. Guardar informes en Notion
+            # Crear agente con herramientas
+            generator_agent = create_react_agent(
+                self.llm_generator,
+                self.generator_tools,
+                system_prompt
+            )
             
-            Instrucciones:
-            - Usa 'generar_informe_recomendacion' para crear informes
-            - Usa 'guardar_informe_notion' para persistir datos
-            - Usa 'generar_resumen_decision' para resumir decisiones
-            - Siempre responde en español
-            - Crea informes profesionales y estructurados
-            """
-            
-            messages = [SystemMessage(content=system_prompt)] + state["messages"]
-            response = self.llm_generator.invoke(messages)
-            return {"messages": [response], "current_agent": "generator"}
+            response = generator_agent.invoke(state)
+            return {"messages": [response["messages"][-1]], "current_agent": "generator"}
         
         def should_use_investigator(state: MultiAgentState) -> Literal["investigator", "generator", "__end__"]:
             """Decide si usar el agente investigador"""

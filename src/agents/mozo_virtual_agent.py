@@ -38,7 +38,7 @@ from langgraph.prebuilt import ToolNode
 from notion_client import Client
 
 # Sistema Multi-Agente
-from .multi_agent_system import MultiAgentMozoVirtual
+from .simple_multi_agent import SimpleMultiAgentMozoVirtual
 
 
 class AgentState(TypedDict):
@@ -780,7 +780,7 @@ class MozoVirtualAgent:
     def initialize_multi_agent(self):
         """Inicializar el sistema multi-agente"""
         try:
-            self.multi_agent_system = MultiAgentMozoVirtual(
+            self.multi_agent_system = SimpleMultiAgentMozoVirtual(
                 vectorstore=self.vectorstore,
                 notion_client=self.notion_client
             )
