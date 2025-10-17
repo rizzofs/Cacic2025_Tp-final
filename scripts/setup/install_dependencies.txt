@@ -1,0 +1,39 @@
+# Instrucciones para instalar todas las dependencias del proyecto
+
+# 1. Crear un entorno virtual (recomendado)
+python -m venv venv
+
+# 2. Activar el entorno virtual
+# En Windows:
+venv\Scripts\activate
+# En macOS/Linux:
+source venv/bin/activate
+
+# 3. Actualizar pip
+python -m pip install --upgrade pip
+
+# 4. Instalar todas las dependencias desde requirements.txt
+pip install -r requirements.txt
+
+# 5. Verificar instalación
+pip list
+
+# 6. Si hay conflictos de versiones, instalar dependencias principales por separado:
+pip install langchain langgraph langchain-chroma langchain-google-genai
+pip install google-generativeai chromadb
+pip install notion-client langsmith
+pip install python-dotenv
+
+# 7. Para desarrollo, instalar dependencias adicionales:
+pip install jupyter matplotlib seaborn
+pip install pytest pytest-asyncio
+
+# 8. Crear archivo .env con las variables de entorno necesarias:
+# GEMINI_API_KEY=tu_api_key_aqui
+# NOTION_API_KEY=tu_notion_api_key_aqui
+# LANGCHAIN_API_KEY=tu_langsmith_api_key_aqui
+# LANGCHAIN_TRACING_V2=true
+# LANGCHAIN_PROJECT=proyecto-final-agentes
+
+# 9. Verificar que todo funciona ejecutando:
+python -c "import langchain, langgraph, chromadb, notion_client, langsmith; print('Todas las dependencias instaladas correctamente')"

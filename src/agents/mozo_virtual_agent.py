@@ -12,6 +12,12 @@ import json
 # Carga de variables de entorno
 from dotenv import load_dotenv
 
+# LangSmith para observabilidad
+import os
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_PROJECT"] = "proyecto-final-agentes"
+os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+
 # Componentes de LangChain
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -32,7 +38,7 @@ from langgraph.prebuilt import ToolNode
 from notion_client import Client
 
 # Sistema Multi-Agente
-from multi_agent_system import MultiAgentMozoVirtual
+from .multi_agent_system import MultiAgentMozoVirtual
 
 
 class AgentState(TypedDict):

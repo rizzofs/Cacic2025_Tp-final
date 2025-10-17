@@ -33,8 +33,40 @@ wheels/
 
 # Archivos de logs
 *.log
+logs/
+data/conversations/*.log
 conversaciones_robino.log
 informes_robino.json
+
+# ChromaDB
+chroma.sqlite3
+data/chroma_db/
+*.db
+
+# Notion
+.notion-cache/
+
+# Test coverage
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Generated reports
+*.json
+!requirements.json
+!package.json
+
+# Documentation build
+docs/_build/
+docs/build/
+
+# Local configuration
+config/local.py
 
 # Archivos temporales
 *.tmp
@@ -52,3 +84,5 @@ Thumbs.db
 *.pyc
 *.pyo
 *.pyd
+
+

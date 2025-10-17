@@ -12,6 +12,12 @@ import json
 # Carga de variables de entorno
 from dotenv import load_dotenv
 
+# LangSmith para observabilidad
+import os
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_PROJECT"] = "proyecto-final-agentes"
+os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+
 # Componentes de LangChain
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -30,6 +36,9 @@ from langgraph.prebuilt import ToolNode
 
 # Integración con Notion
 from notion_client import Client
+
+# LangSmith Observer
+from ..observability.langsmith_observer import LangSmithObserver
 
 
 class MultiAgentState(TypedDict):
@@ -57,6 +66,9 @@ class MultiAgentMozoVirtual:
         # Estado del sistema
         self.current_investigation = {}
         self.generated_reports = []
+        
+        # LangSmith Observer
+        self.observer = LangSmithObserver()
         
         self.setup_tools()
         self.setup_multi_agent_graph()
@@ -476,6 +488,23 @@ class MultiAgentMozoVirtual:
     def process_complex_query(self, query: str):
         """Procesa consultas complejas usando el sistema multi-agente"""
         try:
+            # Iniciar trace en LangSmith
+            trace_index = self.observer.start_trace(
+                "multi_agent_query",
+                {
+                    "query": query,
+                    "timestamp": datetime.now().isoformat(),
+                    "system": "multi_agent_mozo_virtual"
+                }
+            )
+            
+            self.observer.log_event(
+                trace_index,
+                "query_received",
+                {"message": f"Consulta recibida: {query[:50]}..."}
+            )
+            
+            # Procesar con el grafo multi-agente
             result = self.multi_agent_graph.invoke({
                 "messages": [HumanMessage(content=query)],
                 "current_agent": "investigator",
@@ -484,9 +513,30 @@ class MultiAgentMozoVirtual:
                 "client_preferences": {}
             })
             
-            return result["messages"][-1].content
+            response = result["messages"][-1].content
+            
+            # Finalizar trace
+            self.observer.end_trace(
+                trace_index,
+                {
+                    "response": response,
+                    "success": True,
+                    "agents_used": ["investigator", "generator"]
+                }
+            )
+            
+            return response
             
         except Exception as e:
+            # Log error en trace
+            if 'trace_index' in locals():
+                self.observer.end_trace(
+                    trace_index,
+                    {
+                        "error": str(e),
+                        "success": False
+                    }
+                )
             return f"Error procesando consulta compleja: {str(e)}"
 
 
