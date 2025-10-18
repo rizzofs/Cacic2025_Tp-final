@@ -25,7 +25,7 @@ def main():
     print("=" * 60)
     
     try:
-        # Validar configuración
+       # Validar configuración
         settings.validate_config()
         print("[OK] Configuración validada correctamente")
         

@@ -145,7 +145,8 @@ class MozoVirtualAgent:
         self.llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash",
             google_api_key=os.getenv("GEMINI_API_KEY"), 
-            temperature=0.7
+            temperature=0.3,
+            max_output_tokens=2048
         )
         self.embedding_model = GoogleGenerativeAIEmbeddings(
             model="models/gemini-embedding-001",
@@ -492,7 +493,15 @@ class MozoVirtualAgent:
         @tool
         def mostrar_menu_completo():
             """Muestra el menú completo del restaurante con todos los platos, precios e ingredientes."""
-            return """
+            try:
+                # Leer el menú desde el archivo
+                menu_path = Path(__file__).parent.parent.parent / "data" / "menu" / "menu_completo.txt"
+                with open(menu_path, 'r', encoding='utf-8') as f:
+                    menu_content = f.read()
+                return menu_content
+            except Exception as e:
+                # Fallback al menú hardcodeado si hay error
+                return """
 [PEDIDO] MENÚ COMPLETO - LA TABERNA DEL RÍO
 
 [PLATO] APERITIVOS:
@@ -795,64 +804,36 @@ class MozoVirtualAgent:
             dia_actual = dia_espanol.get(dia_semana, dia_semana)
             
             system_prompt = f"""
-            Eres Robino, el mozo virtual del restaurante "La Taberna del Río". 
+            Eres Robino, el mozo virtual del restaurante "La Taberna del Río".
             
             FECHA ACTUAL: {dia_actual}, {fecha_actual.strftime('%d/%m/%Y')}
             
-            REGLA FUNDAMENTAL: SIEMPRE usa las herramientas disponibles. NO respondas con texto libre cuando hay una herramienta específica para la tarea.
+            REGLA FUNDAMENTAL: SIEMPRE usa las herramientas disponibles. NUNCA respondas con texto libre cuando hay una herramienta específica.
             
-            IMPORTANTE: Cuando el cliente pida la carta/menú, DEBES usar mostrar_menu_completo(). NO digas "aquí tienes" o "aquí está", USA LA HERRAMIENTA.
+            CUANDO EL CLIENTE PIDA EL MENÚ:
+            - "carta" → mostrar_menu_completo()
+            - "menú" → mostrar_menu_completo()
+            - "la carta" → mostrar_menu_completo()
+            - "el menu" → mostrar_menu_completo()
+            - "menu" → mostrar_menu_completo()
+            - "QUe hay para cenar?" → mostrar_menu_completo()
+            - "¿qué hay para cenar?" → mostrar_menu_completo()
             
-            HERRAMIENTAS DISPONIBLES Y CUÁNDO USARLAS:
-            
-            1. mostrar_menu_completo() - USA SIEMPRE cuando el cliente pida:
-               - "me traes la carta"
-               - "quiero ver el menú" 
-               - "muéstrame la carta"
-               - "¿qué tienen en el menú?"
-               - "carta"
-               - "menú"
-               - "la carta"
-               - "el menú"
-               
-            EJEMPLO OBLIGATORIO:
-            Si el cliente dice "la carta" o "me traes la carta", tu respuesta debe ser:
-            1. Usar la herramienta mostrar_menu_completo()
-            2. NO agregar texto adicional como "aquí tienes" o "¿te ayudo con algo más?"
-            3. Solo mostrar el resultado de la herramienta
-               
-            2. consultar_menu() - Para preguntas específicas sobre platos individuales
-            
-            3. agregar_al_pedido() - Cuando el cliente quiera pedir algo
-            
-            4. ver_pedido_actual() - Cuando pregunten por su pedido
-            
-            5. eliminar_del_pedido() - Si quieren eliminar algo
-            
-            6. procesar_pago() - Cuando estén listos para pagar
-            
-            7. verificar_estado_pago() - Para verificar si han pagado
-            
-            8. obtener_info_restaurante() - Para horarios y ubicación
+            OTRAS HERRAMIENTAS:
+            - Para pedidos → agregar_al_pedido()
+            - Para pagos → procesar_pago()
+            - Para ver pedido → ver_pedido_actual()
             
             ESPECIALIDADES DEL DIA:
-            - Lunes: Cocido Madrileño - Guiso tradicional con garbanzos y carnes. Precio: $20.000
-            - Martes: Fabada Asturiana - Guiso de alubias blancas con chorizo y morcilla. Precio: $22.000
-            - Miércoles: Gazpacho y Salmorejo - Sopas frías andaluzas. Precio: $15.000
-            - Jueves: Pulpo a Feira - Pulpo gallego tradicional. Precio: $25.000
-            - Viernes: Paella de Mariscos - Paella con mariscos frescos. Precio: $32.000
-            - Sábado: Cochinillo Asado - Cochinillo de Segovia. Precio: $45.000
-            - Domingo: Cocido Completo - Cocido madrileño completo. Precio: $25.000
+            - Lunes: Cocido Madrileño - $20.000
+            - Martes: Fabada Asturiana - $22.000
+            - Miércoles: Gazpacho y Salmorejo - $15.000
+            - Jueves: Pulpo a Feira - $25.000
+            - Viernes: Paella de Mariscos - $32.000
+            - Sábado: Cochinillo Asado - $45.000
+            - Domingo: Cocido Completo - $25.000
             
-            REGLAS IMPORTANTES:
-            - NO PERMITAS que el cliente se retire sin pagar
-            - Si el cliente intenta salir sin pagar, recuérdale que debe pagar primero
-            - Una vez que el cliente pague y se despida, la conversación debe terminar
-            - Mantén un registro de todos los items que el cliente pida
-            - Sé específico con precios y totales
-            - Mantén un tono conversacional pero profesional
-            - SIEMPRE responde directamente sobre el plato del día sin hacer preguntas adicionales
-            - USA LAS HERRAMIENTAS, NO RESPONDAS CON TEXTO LIBRE
+            RECUERDA: USA LAS HERRAMIENTAS. NO RESPONDAS CON TEXTO LIBRE.
             """
             
             messages = [SystemMessage(content=system_prompt)] + state["messages"]
