@@ -458,8 +458,25 @@ class MozoVirtualAgent:
             if self.pagado:
                 return "[OK] Ya has pagado tu pedido. ¡Gracias por tu visita!"
             
+            # Preguntar por el método de pago
+            print(f"\n[MENSAJE] Total a pagar: ${self.total_pedido:,}")
+            print("[MENSAJE] ¿Cómo desea pagar?")
+            print("[MENSAJE] 1. Efectivo")
+            print("[MENSAJE] 2. Tarjeta de crédito/débito")
+            print("[MENSAJE] 3. Transferencia bancaria")
+            
+            metodo_pago = input("\n[MENSAJE] Seleccione una opción (1, 2 o 3): ")
+            
+            metodos = {
+                "1": "efectivo",
+                "2": "tarjeta de crédito/débito", 
+                "3": "transferencia bancaria"
+            }
+            
+            metodo_seleccionado = metodos.get(metodo_pago, "efectivo")
+            
             self.pagado = True
-            return f"[OK] PAGO PROCESADO EXITOSAMENTE\n\n[DINERO] Total pagado: ${self.total_pedido:,}\n\n¡Gracias por tu visita! Tu pedido está siendo preparado. ¡Que disfrutes tu comida!"
+            return f"[OK] PAGO PROCESADO EXITOSAMENTE\n\n[DINERO] Total pagado: ${self.total_pedido:,}\n[METODO] Método de pago: {metodo_seleccionado}\n\n¡Gracias por tu visita! Tu pedido está siendo preparado. ¡Que disfrutes tu comida!"
         
         @tool
         def verificar_estado_pago():
@@ -630,6 +647,62 @@ class MozoVirtualAgent:
         ]
         print("Herramientas del agente configuradas.")
     
+    def guardar_inicio_conversacion(self, nombre_cliente: str):
+        """Guardar inicio de conversación con nombre del cliente en Notion"""
+        if not self.notion_client:
+            return
+            
+        try:
+            page_id = "28815eef-e926-8038-9583-cff88068af9e"
+            
+            # Crear bloque de inicio de conversación
+            blocks = [
+                {
+                    "object": "block",
+                    "type": "divider",
+                    "divider": {}
+                },
+                {
+                    "object": "block",
+                    "type": "heading_2",
+                    "heading_2": {
+                        "rich_text": [{"type": "text", "text": {"content": f"NUEVA CONVERSACIÓN - {nombre_cliente}"}}]
+                    }
+                },
+                {
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {
+                        "rich_text": [{"type": "text", "text": {"content": f"FECHA: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"}}]
+                    }
+                },
+                {
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {
+                        "rich_text": [{"type": "text", "text": {"content": f"CLIENTE: {nombre_cliente}"}}]
+                    }
+                },
+                {
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {
+                        "rich_text": [{"type": "text", "text": {"content": "ROBINO: ¡Bienvenido a La Taberna del Río! ¿En qué puedo ayudarte hoy?"}}]
+                    }
+                }
+            ]
+            
+            self.notion_client.blocks.children.append(
+                block_id=page_id,
+                children=blocks
+            )
+            
+            # También guardar localmente
+            self.guardar_conversacion_local(f"[INICIO] Cliente {nombre_cliente} inició conversación", "Sistema", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            
+        except Exception as e:
+            print(f"[ADVERTENCIA] Error guardando inicio de conversación en Notion: {e}")
+
     def guardar_conversacion(self, mensaje_cliente: str, respuesta_robino: str):
         """Método principal para guardar conversaciones en Notion y localmente."""
         if not self.notion_client:
@@ -711,35 +784,65 @@ class MozoVirtualAgent:
         """Construir el grafo de conversación"""
         def agent_node(state: AgentState):
             """Nodo del agente que procesa mensajes y decide acciones"""
-            system_prompt = """
+            # Obtener fecha actual
+            from datetime import datetime
+            fecha_actual = datetime.now()
+            dia_semana = fecha_actual.strftime("%A")
+            dia_espanol = {
+                "Monday": "Lunes", "Tuesday": "Martes", "Wednesday": "Miércoles",
+                "Thursday": "Jueves", "Friday": "Viernes", "Saturday": "Sábado", "Sunday": "Domingo"
+            }
+            dia_actual = dia_espanol.get(dia_semana, dia_semana)
+            
+            system_prompt = f"""
             Eres Robino, el mozo virtual del restaurante "La Taberna del Río". 
             
-            Tu personalidad:
-            - Eres amable, profesional y servicial
-            - Conoces perfectamente el menú y las especialidades
-            - Siempre respondes en español
-            - Eres paciente y atento con los clientes
-            - Tienes sentido del humor pero mantienes la profesionalidad
+            FECHA ACTUAL: {dia_actual}, {fecha_actual.strftime('%d/%m/%Y')}
             
-            Tu trabajo:
-            1. Saludar cordialmente a los clientes
-            2. Ayudar con información del menú y recomendaciones
-            3. Tomar pedidos y agregar items a la cuenta del cliente
-            4. Mostrar el pedido actual cuando lo soliciten
-            5. Procesar pagos cuando el cliente esté listo
-            6. Verificar que el cliente haya pagado antes de permitir que se retire
-            7. Responder preguntas sobre horarios, ubicación y servicios
+            REGLA FUNDAMENTAL: SIEMPRE usa las herramientas disponibles. NO respondas con texto libre cuando hay una herramienta específica para la tarea.
             
-            Instrucciones importantes:
-            - Cuando el cliente pida "menú", "carta", "ver el menú", "mostrar menú" → USA 'mostrar_menu_completo'
-            - Para preguntas específicas sobre platos individuales, usa 'consultar_menu'
-            - Usa 'obtener_info_restaurante' para horarios y ubicación
-            - Usa 'obtener_plato_del_dia' cuando pregunten por especialidades del día
-            - Cuando el cliente quiera pedir algo, usa 'agregar_al_pedido' con el nombre del plato/bebida
-            - Cuando pregunten por su pedido, usa 'ver_pedido_actual'
-            - Si quieren eliminar algo, usa 'eliminar_del_pedido' con el número del item
-            - Cuando estén listos para pagar, usa 'procesar_pago'
-            - Para verificar si han pagado, usa 'verificar_estado_pago'
+            IMPORTANTE: Cuando el cliente pida la carta/menú, DEBES usar mostrar_menu_completo(). NO digas "aquí tienes" o "aquí está", USA LA HERRAMIENTA.
+            
+            HERRAMIENTAS DISPONIBLES Y CUÁNDO USARLAS:
+            
+            1. mostrar_menu_completo() - USA SIEMPRE cuando el cliente pida:
+               - "me traes la carta"
+               - "quiero ver el menú" 
+               - "muéstrame la carta"
+               - "¿qué tienen en el menú?"
+               - "carta"
+               - "menú"
+               - "la carta"
+               - "el menú"
+               
+            EJEMPLO OBLIGATORIO:
+            Si el cliente dice "la carta" o "me traes la carta", tu respuesta debe ser:
+            1. Usar la herramienta mostrar_menu_completo()
+            2. NO agregar texto adicional como "aquí tienes" o "¿te ayudo con algo más?"
+            3. Solo mostrar el resultado de la herramienta
+               
+            2. consultar_menu() - Para preguntas específicas sobre platos individuales
+            
+            3. agregar_al_pedido() - Cuando el cliente quiera pedir algo
+            
+            4. ver_pedido_actual() - Cuando pregunten por su pedido
+            
+            5. eliminar_del_pedido() - Si quieren eliminar algo
+            
+            6. procesar_pago() - Cuando estén listos para pagar
+            
+            7. verificar_estado_pago() - Para verificar si han pagado
+            
+            8. obtener_info_restaurante() - Para horarios y ubicación
+            
+            ESPECIALIDADES DEL DIA:
+            - Lunes: Cocido Madrileño - Guiso tradicional con garbanzos y carnes. Precio: $20.000
+            - Martes: Fabada Asturiana - Guiso de alubias blancas con chorizo y morcilla. Precio: $22.000
+            - Miércoles: Gazpacho y Salmorejo - Sopas frías andaluzas. Precio: $15.000
+            - Jueves: Pulpo a Feira - Pulpo gallego tradicional. Precio: $25.000
+            - Viernes: Paella de Mariscos - Paella con mariscos frescos. Precio: $32.000
+            - Sábado: Cochinillo Asado - Cochinillo de Segovia. Precio: $45.000
+            - Domingo: Cocido Completo - Cocido madrileño completo. Precio: $25.000
             
             REGLAS IMPORTANTES:
             - NO PERMITAS que el cliente se retire sin pagar
@@ -748,6 +851,8 @@ class MozoVirtualAgent:
             - Mantén un registro de todos los items que el cliente pida
             - Sé específico con precios y totales
             - Mantén un tono conversacional pero profesional
+            - SIEMPRE responde directamente sobre el plato del día sin hacer preguntas adicionales
+            - USA LAS HERRAMIENTAS, NO RESPONDAS CON TEXTO LIBRE
             """
             
             messages = [SystemMessage(content=system_prompt)] + state["messages"]
@@ -808,7 +913,20 @@ class MozoVirtualAgent:
         print("    BIENVENIDO A LA TABERNA DEL RIO")
         print("="*60)
         print("\nRobino, tu mozo virtual, está listo para atenderte.")
-        print("(Escribe 'salir' para terminar la conversación)")
+        
+        # Solicitar nombre del cliente primero
+        print("\nPara brindarte el mejor servicio, necesito conocer tu nombre.")
+        nombre_cliente = input("¿Cómo te llamas? ")
+        
+        # Almacenar nombre en Notion (sin mostrar mensajes)
+        try:
+            self.guardar_inicio_conversacion(nombre_cliente)
+        except Exception as e:
+            pass  # Silenciar errores de guardado
+        
+        print(f"\n¡Perfecto, {nombre_cliente}! Bienvenido a La Taberna del Río.")
+        
+        print("\n(Escribe 'salir' para terminar la conversación)")
         
         while True:
             query = input("\nCliente: ")
@@ -857,23 +975,15 @@ class MozoVirtualAgent:
                     print("="*60)
                     break
             
-            # Guardar conversación en Notion automáticamente
+            # Guardar conversación en Notion automáticamente (sin mostrar mensajes)
             try:
-                result = self.guardar_conversacion(query, final_response)
-                if "Notion" in result and "exitosamente" in result:
-                    print("[GUARDAR] Conversación guardada en Notion")
-                elif "localmente" in result:
-                    print("[GUARDAR] Conversación guardada localmente")
-                else:
-                    print("[GUARDAR] Conversación guardada")
+                self.guardar_conversacion(query, final_response)
             except Exception as e:
-                print(f"[ADVERTENCIA] Error guardando conversación: {e}")
                 # Fallback: guardar solo localmente
                 try:
                     self.guardar_conversacion_local_simple(query, final_response)
-                    print("[GUARDAR] Conversación guardada localmente como respaldo")
                 except Exception as e2:
-                    print(f"[ADVERTENCIA] Error crítico guardando conversación: {e2}")
+                    pass  # Silenciar errores de guardado
 
 
 def main():

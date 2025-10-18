@@ -17,7 +17,7 @@ from src.agents import MozoVirtualAgent
 def main():
     """Función principal del sistema"""
     print("=" * 60)
-    print("🤖 SISTEMA MOZO VIRTUAL - PROYECTO FINAL CACIC 2025")
+    print("[ROBOT] SISTEMA MOZO VIRTUAL - PROYECTO FINAL CACIC 2025")
     print("=" * 60)
     print(f"Versión: {settings.__version__ if hasattr(settings, '__version__') else '1.0.0'}")
     print(f"LangSmith: {settings.get_langsmith_url()}")
@@ -34,14 +34,14 @@ def main():
         agent = MozoVirtualAgent()
         
         print("[OK] Sistema inicializado correctamente")
-        print("\n🎯 FUNCIONALIDADES DISPONIBLES:")
+        print("\n[TARGET] FUNCIONALIDADES DISPONIBLES:")
         print("- Sistema multi-agente con colaboración")
         print("- Base de conocimiento RAG avanzada")
         print("- Integración con Notion para persistencia")
         print("- Observabilidad completa con LangSmith")
         print("- Tracing y análisis de rendimiento")
         
-        print("\n🚀 Iniciando conversación...")
+        print("\n[START] Iniciando conversación...")
         agent.start_conversation()
         
     except Exception as e:

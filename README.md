@@ -233,7 +233,7 @@ python -m pytest tests/ -v
 
 ## 👨‍💻 Autor
 
-**Rizzo** - Proyecto Final Integrador CACIC 2025
+**Rizzo - Briatore** - Proyecto Final Integrador CACIC 2025
 
 ## 📄 Licencia
 
