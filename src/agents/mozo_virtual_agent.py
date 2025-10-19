@@ -392,6 +392,33 @@ class MozoVirtualAgent:
             """
         
         @tool
+        def recomendar_bebida(plato_principal: str):
+            """
+            Recomienda la bebida perfecta para maridar con un plato principal específico.
+            El 'plato_principal' debe ser el nombre exacto del plato o una categoría (ej: 'carne', 'pescado', 'postre').
+            """
+            plato_lower = plato_principal.lower()
+            
+            # Lógica de maridaje simple basada en categorías
+            if "solomillo" in plato_lower or "cordero" in plato_lower or "cochinillo" in plato_lower or "carne" in plato_lower:
+                return "Te recomiendo un excelente **Rioja Reserva**. Sus notas afrutadas y cuerpo fuerte maridan perfectamente con carnes rojas y asados."
+            
+            elif "paella" in plato_lower or "bacalao" in plato_lower or "merluza" in plato_lower or "pulpo" in plato_lower or "pescado" in plato_lower or "mariscos" in plato_lower:
+                return "Para platos de mar y arroces, el **Albariño** (vino blanco gallego) es la elección ideal por su frescura y acidez. Si prefieres algo más audaz, prueba un **Cava Brut**."
+                
+            elif "risotto" in plato_lower or "tortilla" in plato_lower or "ensalada" in plato_lower or "vegetariano" in plato_lower:
+                return "Un plato vegetariano marida muy bien con un vino blanco ligero o un tinto joven. ¿Qué tal una copa de **Albariño** o una refrescante **Limonada Casera**?"
+                
+            elif "flan" in plato_lower or "tarta" in plato_lower or "crema" in plato_lower or "helado" in plato_lower or "postre" in plato_lower:
+                return "Para el postre, te sugiero un delicioso **Café** o un vino dulce, aunque no servimos. ¿Qué te parece una copa de **Cava Brut** para celebrar?"
+            
+            elif "aperitivo" in plato_lower or "tapas" in plato_lower or "quesos" in plato_lower:
+                 return "Para abrir el apetito, una cerveza fría como la **Estrella Galicia** o un buen vino tinto ligero (nuestro Rioja joven) son perfectos."
+            
+            else:
+                return f"Lo siento, no tengo una recomendación específica de maridaje para el plato '{plato_principal}'. ¿Puedes ser más específico?"
+        
+        @tool
         def agregar_al_pedido(item: str, cantidad: int = 1):
             """Agrega un item al pedido del cliente. El item debe ser el nombre exacto del plato o bebida."""
             # Buscar el item en el diccionario de precios (case insensitive)
@@ -626,7 +653,8 @@ class MozoVirtualAgent:
             eliminar_del_pedido,
             procesar_pago,
             verificar_estado_pago,
-            guardar_conversacion
+            guardar_conversacion,
+            recomendar_bebida
         ]
         print("Herramientas del agente configuradas.")
     
@@ -725,16 +753,18 @@ class MozoVirtualAgent:
             1. Saludar cordialmente a los clientes
             2. Ayudar con información del menú y recomendaciones
             3. Tomar pedidos y agregar items a la cuenta del cliente
-            4. Mostrar el pedido actual cuando lo soliciten
-            5. Procesar pagos cuando el cliente esté listo
-            6. Verificar que el cliente haya pagado antes de permitir que se retire
-            7. Responder preguntas sobre horarios, ubicación y servicios
-            
+            4. Ofrecer maridajes y recomendar bebidas para los platos.
+            5. Mostrar el pedido actual cuando lo soliciten
+            6. Procesar pagos cuando el cliente esté listo
+            7. Verificar que el cliente haya pagado antes de permitir que se retire
+            8. Responder preguntas sobre horarios, ubicación y servicios
+
             Instrucciones importantes:
             - Cuando el cliente pida "menú", "carta", "ver el menú", "mostrar menú" → USA 'mostrar_menu_completo'
             - Para preguntas específicas sobre platos individuales, usa 'consultar_menu'
             - Usa 'obtener_info_restaurante' para horarios y ubicación
             - Usa 'obtener_plato_del_dia' cuando pregunten por especialidades del día
+            - Si el cliente pregunta por una recomendación de bebida para un plato, USA 'recomendar_bebida'
             - Cuando el cliente quiera pedir algo, usa 'agregar_al_pedido' con el nombre del plato/bebida
             - Cuando pregunten por su pedido, usa 'ver_pedido_actual'
             - Si quieren eliminar algo, usa 'eliminar_del_pedido' con el número del item
